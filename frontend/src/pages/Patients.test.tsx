@@ -2,7 +2,7 @@ import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { api, ApiError } from '../api'
-import { makePatient } from '../test/fixtures'
+import { makePatient, makeSummary } from '../test/fixtures'
 import { renderApp } from '../test/render'
 
 let listPatients: MockInstance<typeof api.listPatients>
@@ -83,7 +83,7 @@ describe('Patients page', () => {
   it('returns to the same results from a patient', async () => {
     vi.spyOn(api, 'getPatient').mockResolvedValue(makePatient())
     vi.spyOn(api, 'listNotes').mockResolvedValue([])
-    vi.spyOn(api, 'getSummary').mockResolvedValue({ summary: '' })
+    vi.spyOn(api, 'getSummary').mockResolvedValue(makeSummary())
     const user = userEvent.setup()
     renderApp('/patients?search=maria&status=active')
     await user.click(await screen.findByText('maria@example.com'))

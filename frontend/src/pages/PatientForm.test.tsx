@@ -2,7 +2,7 @@ import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, ApiError } from '../api'
-import { makePatient } from '../test/fixtures'
+import { makePatient, makeSummary } from '../test/fixtures'
 import { renderApp } from '../test/render'
 
 const maria = makePatient()
@@ -11,7 +11,7 @@ beforeEach(() => {
   // After saving, the form navigates to the patient's detail page.
   vi.spyOn(api, 'getPatient').mockResolvedValue(maria)
   vi.spyOn(api, 'listNotes').mockResolvedValue([])
-  vi.spyOn(api, 'getSummary').mockResolvedValue({ summary: '' })
+  vi.spyOn(api, 'getSummary').mockResolvedValue(makeSummary())
   vi.spyOn(api, 'listAllergies').mockResolvedValue(['Latex', 'Penicillin', 'Pollen'])
   vi.spyOn(api, 'listConditions').mockResolvedValue(['Asthma', 'Migraine'])
 })
@@ -88,6 +88,35 @@ describe('PatientForm', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
     expect(await screen.findByText(message)).toBeInTheDocument()
     expect(screen.getByLabelText('Email')).toHaveAccessibleDescription(message)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('explains length limits on the fields', async () => {
+    const createPatient = vi.spyOn(api, 'createPatient')
+    const user = userEvent.setup()
+    renderApp('/patients/new')
+    await fillRequiredFields(user)
+    fireEvent.change(screen.getByLabelText('First name'), { target: { value: 'x'.repeat(81) } })
+    const allergies = screen.getByRole('combobox', { name: 'Allergies' })
+    fireEvent.change(allergies, { target: { value: 'x'.repeat(101) } })
+    fireEvent.keyDown(allergies, { key: 'Enter' })
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('First name must be 80 characters or fewer')).toBeInTheDocument()
+    expect(screen.getByText('Each allergy must be 100 characters or fewer')).toBeInTheDocument()
+    expect(createPatient).not.toHaveBeenCalled()
+  })
+
+  it('shows an API error on one allergy on the Allergies field', async () => {
+    const message = 'String should have at most 100 characters'
+    vi.spyOn(api, 'createPatient').mockRejectedValue(
+      new ApiError(`allergies.0: ${message}`, { allergies: message }),
+    )
+    const user = userEvent.setup()
+    renderApp('/patients/new')
+    await fillRequiredFields(user)
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    expect(await screen.findByText(message)).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 

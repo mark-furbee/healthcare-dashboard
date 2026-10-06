@@ -29,20 +29,50 @@ const notInFuture = (date: string) => date <= new Date().toLocaleDateString('en-
 
 // Mirrors the API's rules so most mistakes are caught before a request is sent.
 // The API remains the authority; its errors are shown below the form.
+// Each allergy or condition is checked as part of the list, so the message shows on the field.
+const listOfNames = (label: string) =>
+  z
+    .array(z.string())
+    .refine(
+      (names) => names.every((name) => name.length <= 100),
+      `Each ${label} must be 100 characters or fewer`,
+    )
+
+// Lengths match the API's limits (backend/app/schemas.py).
 const schema = z.object({
-  first_name: z.string().trim().min(1, 'First name is required'),
-  last_name: z.string().trim().min(1, 'Last name is required'),
+  first_name: z
+    .string()
+    .trim()
+    .min(1, 'First name is required')
+    .max(80, 'First name must be 80 characters or fewer'),
+  last_name: z
+    .string()
+    .trim()
+    .min(1, 'Last name is required')
+    .max(80, 'Last name must be 80 characters or fewer'),
   date_of_birth: z
     .string()
     .min(1, 'Date of birth is required')
     .refine(notInFuture, 'Date of birth cannot be in the future'),
-  email: z.string().trim().email('Enter a valid email address'),
-  phone: z.string().trim().min(5, 'Enter a valid phone number'),
-  address: z.string().trim().min(3, 'Address is required'),
+  email: z
+    .string()
+    .trim()
+    .max(254, 'Email must be 254 characters or fewer')
+    .email('Enter a valid email address'),
+  phone: z
+    .string()
+    .trim()
+    .min(5, 'Enter a valid phone number')
+    .max(40, 'Phone must be 40 characters or fewer'),
+  address: z
+    .string()
+    .trim()
+    .min(3, 'Address is required')
+    .max(300, 'Address must be 300 characters or fewer'),
   blood_type: z.enum(BLOOD_TYPES, { message: 'Select a blood type' }),
   status: z.enum(STATUSES),
-  allergies: z.array(z.string().max(100, 'Each entry must be at most 100 characters')),
-  conditions: z.array(z.string().max(100, 'Each entry must be at most 100 characters')),
+  allergies: listOfNames('allergy'),
+  conditions: listOfNames('condition'),
   last_visit: z
     .string()
     .refine((date) => !date || notInFuture(date), 'Last visit cannot be in the future'),

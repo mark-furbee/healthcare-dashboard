@@ -98,8 +98,18 @@ class NoteOut(BaseModel):
     content: str
 
 
+class SummaryEntry(BaseModel):
+    date: str
+    excerpt: str
+
+
 class Summary(BaseModel):
+    # The whole summary as text, and its parts for clients that lay it out.
     summary: str
+    overview: str
+    conditions: list[str]
+    allergies: list[str]
+    history: list[SummaryEntry]
 
 
 class AuditEntryOut(BaseModel):

@@ -61,3 +61,25 @@ def test_summary_rejects_unknown_time_zone(client, patients):
     response = client.get(f"/patients/{patients[0].id}/summary?tz=Mars/Olympus")
     assert response.status_code == 422
     assert response.json()["detail"][0]["loc"] == ["query", "tz"]
+
+
+def test_summary_returns_its_parts(client, patients):
+    maria = patients[0]
+    client.post(
+        f"/patients/{maria.id}/notes",
+        json={"content": "Started inhaler.", "timestamp": "2026-01-01T09:00:00Z"},
+    )
+    body = client.get(f"/patients/{maria.id}/summary").json()
+    assert body["overview"].startswith("Maria Rodriguez is a ")
+    assert (body["conditions"], body["allergies"]) == (["Asthma"], ["Penicillin"])
+    assert body["history"] == [{"date": "1/1/2026", "excerpt": "Started inhaler."}]
+
+
+def test_summary_quotes_long_notes_as_excerpts(client, patients):
+    maria = patients[0]
+    long_note = "Patient reports\nimproving symptoms. " + "word " * 100
+    client.post(f"/patients/{maria.id}/notes", json={"content": long_note})
+    [entry] = client.get(f"/patients/{maria.id}/summary").json()["history"]
+    assert entry["excerpt"].startswith("Patient reports improving symptoms. word")
+    assert entry["excerpt"].endswith("word…")
+    assert len(entry["excerpt"]) <= 201

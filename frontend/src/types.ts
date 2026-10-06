@@ -44,3 +44,13 @@ export interface Note {
   timestamp: string
   content: string
 }
+
+/** The generated summary as text, and its parts for laying it out. */
+export interface Summary {
+  summary: string
+  overview: string
+  conditions: string[]
+  allergies: string[]
+  /** Note excerpts, oldest first, dated m/d/YYYY in the viewer's time zone. */
+  history: { date: string; excerpt: string }[]
+}

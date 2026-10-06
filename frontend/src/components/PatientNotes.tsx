@@ -7,8 +7,12 @@ import { notesQuery } from '../queries'
 import { ErrorAlert } from './ErrorAlert'
 import { Section } from './Section'
 
+// Matches the API's limit; the count appears as a note nears it.
 const MAX_NOTE_LENGTH = 5000
+const SHOW_COUNT_FROM = 4500
 const CLOCK_TICK_MS = 30_000
+
+const formatCount = (count: number) => count.toLocaleString('en-US')
 
 /** The current time as a datetime-local value, kept up to date while the page is open. */
 function useNow() {
@@ -26,6 +30,9 @@ export function PatientNotes({ patientId }: { patientId: number }) {
   // null until the user picks a time; the field then shows, and the note gets, the current time.
   const [time, setTime] = useState<string | null>(null)
   const now = useNow()
+  // The API trims notes before checking their length.
+  const length = content.trim().length
+  const tooLong = length > MAX_NOTE_LENGTH
   const notes = useQuery(notesQuery(patientId))
   // Notes feed the summary, so refresh everything cached under this patient.
   const refreshPatient = () => queryClient.invalidateQueries({ queryKey: ['patient', patientId] })
@@ -59,7 +66,15 @@ export function PatientNotes({ patientId }: { patientId: number }) {
           onChange={(event) => setContent(event.target.value)}
           multiline
           minRows={2}
-          slotProps={{ htmlInput: { maxLength: MAX_NOTE_LENGTH } }}
+          // No hard cap on the input: a pasted note would be cut off without warning.
+          error={tooLong}
+          helperText={
+            tooLong
+              ? `Notes must be ${formatCount(MAX_NOTE_LENGTH)} characters or fewer (currently ${formatCount(length)})`
+              : length >= SHOW_COUNT_FROM
+                ? `${formatCount(length)} / ${formatCount(MAX_NOTE_LENGTH)}`
+                : undefined
+          }
         />
         <Stack
           direction={{ xs: 'column', sm: 'row' }}
@@ -77,7 +92,7 @@ export function PatientNotes({ patientId }: { patientId: number }) {
           <Button
             type="submit"
             variant="contained"
-            disabled={!content.trim() || createNote.isPending}
+            disabled={!length || tooLong || createNote.isPending}
             sx={{ alignSelf: { xs: 'flex-end', sm: 'flex-start' } }}
           >
             Add note
