@@ -1,0 +1,18 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.lint.per-file-ignores]
+# DATABASE_URL must be set before the app modules are imported.
+"tests/conftest.py" = ["E402"]
+
+[tool.ruff.lint.isort]
+# The migrations directory is named alembic/, which would otherwise make the package look local.
+known-third-party = ["alembic"]
+
+[tool.pytest.ini_options]
+# Lets a bare `pytest` import the app package, as `python -m pytest` already does.
+pythonpath = ["."]
