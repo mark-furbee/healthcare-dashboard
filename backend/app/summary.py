@@ -1,6 +1,7 @@
 import re
 from datetime import UTC, datetime, tzinfo
 
+from .dates import as_utc
 from .models import Patient
 
 # A summary quotes the start of each note; the full text stays in the notes list.
@@ -21,9 +22,7 @@ def excerpt(text: str) -> str:
 
 
 def local_date(timestamp: datetime, zone: tzinfo) -> str:
-    # SQLite returns stored times without a zone; they were saved in UTC.
-    aware = timestamp if timestamp.tzinfo else timestamp.replace(tzinfo=UTC)
-    day = aware.astimezone(zone)
+    day = as_utc(timestamp).astimezone(zone)
     return f"{day.month}/{day.day}/{day.year}"
 
 

@@ -10,6 +10,8 @@ from pydantic import (
     field_validator,
 )
 
+from .dates import as_utc
+
 
 def not_in_future(value: date) -> date:
     if value > date.today():
@@ -78,8 +80,7 @@ CLOCK_SKEW = timedelta(minutes=5)
 
 
 def not_in_future_time(value: datetime) -> datetime:
-    # A time without a zone is taken as UTC, like the stored timestamps.
-    value = value if value.tzinfo else value.replace(tzinfo=UTC)
+    value = as_utc(value)
     if value > datetime.now(UTC) + CLOCK_SKEW:
         raise ValueError("Note time cannot be in the future")
     return value

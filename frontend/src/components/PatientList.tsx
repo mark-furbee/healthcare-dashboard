@@ -13,9 +13,9 @@ import {
 } from '@mui/material'
 import type { MouseEvent } from 'react'
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom'
-import type { ListReturnState } from '../useListReturn'
-import { formatDate, fullName } from '../format'
+import { formatDate, formatDateOrNone, fullName } from '../format'
 import type { Patient, SortField } from '../types'
+import { listReturnState } from '../useListReturn'
 import { StatusChip } from './StatusChip'
 
 // detail names the gray second line in that column's cells.
@@ -54,7 +54,7 @@ export function PatientList({
 }: PatientListProps) {
   const navigate = useNavigate()
   // Opened patients remember this list's search, filter, sort, and page for their back link.
-  const listState: ListReturnState = { listSearch: useLocation().search }
+  const listState = listReturnState(useLocation().search)
 
   // The whole row opens the patient for mouse users; the name stays a real link for keyboard
   // and screen-reader users. Clicks on the link itself, and clicks that finish selecting text
@@ -119,9 +119,7 @@ export function PatientList({
                     {formatDate(patient.date_of_birth)}
                   </Typography>
                 </TableCell>
-                <TableCell>
-                  {patient.last_visit ? formatDate(patient.last_visit) : 'None'}
-                </TableCell>
+                <TableCell>{formatDateOrNone(patient.last_visit)}</TableCell>
                 <TableCell>
                   <StatusChip status={patient.status} />
                 </TableCell>

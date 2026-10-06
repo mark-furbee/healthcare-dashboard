@@ -3,7 +3,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useEffect, useState, type SubmitEvent } from 'react'
 import { api } from '../api'
 import { formatDateTime, toDateTimeInputValue } from '../format'
-import { notesQuery } from '../queries'
+import { notesQuery, queryKeys } from '../queries'
 import { ErrorAlert } from './ErrorAlert'
 import { Section } from './Section'
 
@@ -35,7 +35,8 @@ export function PatientNotes({ patientId }: { patientId: number }) {
   const tooLong = length > MAX_NOTE_LENGTH
   const notes = useQuery(notesQuery(patientId))
   // Notes feed the summary, so refresh everything cached under this patient.
-  const refreshPatient = () => queryClient.invalidateQueries({ queryKey: ['patient', patientId] })
+  const refreshPatient = () =>
+    queryClient.invalidateQueries({ queryKey: queryKeys.patient(patientId) })
 
   const createNote = useMutation({
     // An unchanged time is left to the server, so a form left open still records when it was sent.
@@ -105,25 +106,24 @@ export function PatientNotes({ patientId }: { patientId: number }) {
       {notes.data?.length === 0 && <Typography color="text.secondary">No notes yet.</Typography>}
       <List>
         {notes.data?.map((note) => (
-          <ListItem
-            key={note.id}
-            divider
-            secondaryAction={
-              <Button
-                color="error"
-                size="small"
-                onClick={() => window.confirm('Delete this note?') && deleteNote.mutate(note.id)}
-                disabled={deleteNote.isPending}
-              >
-                Delete note
-              </Button>
-            }
-          >
+          // The button sits in the row's layout rather than MUI's secondaryAction, which
+          // overlays it and only reserves room for an icon, so long notes ran under it.
+          <ListItem key={note.id} divider sx={{ alignItems: 'flex-start', gap: 2, px: 0 }}>
             <ListItemText
               primary={note.content}
               secondary={formatDateTime(note.timestamp)}
-              slotProps={{ primary: { sx: { whiteSpace: 'pre-wrap' } } }}
+              sx={{ my: 0, minWidth: 0 }}
+              slotProps={{ primary: { sx: { whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' } } }}
             />
+            <Button
+              color="error"
+              size="small"
+              onClick={() => window.confirm('Delete this note?') && deleteNote.mutate(note.id)}
+              disabled={deleteNote.isPending}
+              sx={{ flexShrink: 0 }}
+            >
+              Delete note
+            </Button>
           </ListItem>
         ))}
       </List>

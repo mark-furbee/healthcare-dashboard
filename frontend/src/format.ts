@@ -11,6 +11,9 @@ export function formatDate(isoDate: string) {
   return `${month}/${day}/${year}`
 }
 
+/** formatDate for an optional date, such as a last visit that hasn't happened. */
+export const formatDateOrNone = (isoDate: string | null) => (isoDate ? formatDate(isoDate) : 'None')
+
 /** Formats an ISO timestamp in the viewer's time zone as m/d/YYYY, h:mm AM/PM. */
 export const formatDateTime = (isoTimestamp: string) =>
   new Date(isoTimestamp).toLocaleString('en-US', {

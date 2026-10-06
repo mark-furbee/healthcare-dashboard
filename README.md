@@ -1,7 +1,6 @@
 # Healthcare Dashboard
 
-An ongoing full-stack take-home exercise: a healthcare patient-management dashboard built with
-React, TypeScript, FastAPI, PostgreSQL, and Docker.
+A full-stack healthcare patient-management dashboard built with React, TypeScript, FastAPI, PostgreSQL, and Docker.
 
 - `backend/`: FastAPI, SQLAlchemy, Alembic migrations, sample-data seed
 - `frontend/`: React, TypeScript, Vite, MUI

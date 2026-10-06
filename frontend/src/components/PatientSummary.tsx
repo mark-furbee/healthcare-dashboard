@@ -1,22 +1,9 @@
 import { Box, Chip, CircularProgress, Stack, Typography } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
-import type { ReactNode } from 'react'
 import { summaryQuery } from '../queries'
+import { Detail, DetailList } from './DetailList'
 import { ErrorAlert } from './ErrorAlert'
 import { Section } from './Section'
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <>
-      <Typography component="dt" variant="body2" color="text.secondary" sx={{ pt: 0.25 }}>
-        {label}
-      </Typography>
-      <Box component="dd" sx={{ m: 0 }}>
-        {children}
-      </Box>
-    </>
-  )
-}
 
 function Chips({ names, color }: { names: string[]; color?: 'warning' }) {
   if (names.length === 0) return <Typography color="text.secondary">None recorded</Typography>
@@ -38,24 +25,21 @@ export function PatientSummary({ patientId }: { patientId: number }) {
       {summary.isSuccess && (
         <Stack spacing={2}>
           <Typography>{summary.data.overview}</Typography>
-          <Box
-            component="dl"
+          <DetailList
             sx={{
-              display: 'grid',
               gridTemplateColumns: { xs: '1fr', sm: 'max-content 1fr' },
               columnGap: 3,
               rowGap: 1.5,
-              m: 0,
             }}
           >
-            <Row label="Conditions">
+            <Detail inline label="Conditions">
               <Chips names={summary.data.conditions} />
-            </Row>
+            </Detail>
             {/* Allergies stand out: they matter for every treatment decision. */}
-            <Row label="Allergies">
+            <Detail inline label="Allergies">
               <Chips names={summary.data.allergies} color="warning" />
-            </Row>
-            <Row label="History">
+            </Detail>
+            <Detail inline label="History">
               {summary.data.history.length === 0 ? (
                 <Typography color="text.secondary">
                   No clinical notes have been recorded.
@@ -74,8 +58,8 @@ export function PatientSummary({ patientId }: { patientId: number }) {
                   ))}
                 </Stack>
               )}
-            </Row>
-          </Box>
+            </Detail>
+          </DetailList>
         </Stack>
       )}
     </Section>

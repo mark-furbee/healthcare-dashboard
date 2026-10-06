@@ -1,7 +1,6 @@
 import { MenuItem, TextField } from '@mui/material'
-import { isThemeName, THEME_NAMES, useThemeName, type ThemeName } from '../theme'
-
-const LABELS: Record<ThemeName, string> = { light: 'Light', dark: 'Dark' }
+import { capitalize } from '../format'
+import { isThemeName, THEME_NAMES, useThemeName } from '../theme'
 
 export function ThemePicker() {
   const { themeName, setThemeName } = useThemeName()
@@ -15,7 +14,7 @@ export function ThemePicker() {
     >
       {THEME_NAMES.map((name) => (
         <MenuItem key={name} value={name}>
-          {LABELS[name]}
+          {capitalize(name)}
         </MenuItem>
       ))}
     </TextField>

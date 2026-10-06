@@ -18,7 +18,7 @@ import { ErrorAlert } from '../components/ErrorAlert'
 import { MultiSelectField } from '../components/MultiSelectField'
 import { Section } from '../components/Section'
 import { capitalize } from '../format'
-import { allergiesQuery, conditionsQuery, patientQuery } from '../queries'
+import { allergiesQuery, conditionsQuery, patientQuery, queryKeys } from '../queries'
 import { BLOOD_TYPES, STATUSES, type Patient, type PatientInput } from '../types'
 import { useListReturn } from '../useListReturn'
 import { usePatientId } from '../usePatientId'
@@ -27,8 +27,6 @@ import { NotFound } from './NotFound'
 // en-CA formats dates as YYYY-MM-DD, the same format as a date input's value.
 const notInFuture = (date: string) => date <= new Date().toLocaleDateString('en-CA')
 
-// Mirrors the API's rules so most mistakes are caught before a request is sent.
-// The API remains the authority; its errors are shown below the form.
 // Each allergy or condition is checked as part of the list, so the message shows on the field.
 const listOfNames = (label: string) =>
   z
@@ -38,7 +36,9 @@ const listOfNames = (label: string) =>
       `Each ${label} must be 100 characters or fewer`,
     )
 
-// Lengths match the API's limits (backend/app/schemas.py).
+// Mirrors the API's rules and length limits (backend/app/schemas.py), so most mistakes are caught
+// before a request is sent. The API remains the authority: its errors show on the field they name,
+// or below the form otherwise.
 const schema = z.object({
   first_name: z
     .string()
@@ -145,10 +145,15 @@ function PatientForm({ patient }: { patient?: Patient }) {
     mutationFn: (input: PatientInput) =>
       patient ? api.updatePatient(patient.id, input) : api.createPatient(input),
     onSuccess: (saved) => {
-      queryClient.invalidateQueries({ queryKey: ['patients'] })
-      queryClient.invalidateQueries({ queryKey: ['patient', saved.id] })
-      queryClient.invalidateQueries({ queryKey: ['allergies'] })
-      queryClient.invalidateQueries({ queryKey: ['conditions'] })
+      // A save can add an allergy or condition name, so the form's choices refresh too.
+      for (const queryKey of [
+        queryKeys.patients,
+        queryKeys.patient(saved.id),
+        queryKeys.allergies,
+        queryKeys.conditions,
+      ]) {
+        queryClient.invalidateQueries({ queryKey })
+      }
       navigate(`/patients/${saved.id}`, { state: listReturnState })
     },
     onError: (error) => {
