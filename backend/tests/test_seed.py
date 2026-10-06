@@ -1,6 +1,7 @@
 from sqlalchemy import func, select
 
 from app.models import Allergy, Condition, Patient
+from app.schemas import PatientOut
 from app.seed import ALLERGIES, CONDITIONS, PATIENT_COUNT, generate_patients, seed
 
 
@@ -14,6 +15,8 @@ def test_generated_patients_are_valid_unique_and_reproducible(db):
     patients = generate_patients()
     db.add_all(patients)
     db.commit()
+    for patient in patients:
+        PatientOut.model_validate(patient)
     assert len({patient.email for patient in patients}) == PATIENT_COUNT
     assert len({patient.phone for patient in patients}) == PATIENT_COUNT
 

@@ -36,6 +36,17 @@ Reset the database with `docker compose down -v`, then start again.
 To add a migration, add a file to `backend/alembic/versions/` (see `0001_initial.py`); it's applied
 on the next `docker compose up --build`.
 
+## Using the app
+
+- **Patients:** search by name or email, filter by status, and sort by any column. The list's
+  state is kept in the URL, so Back, reloads, and shared links show the same results.
+- **Patient record:** click any row to open it; "← Back to patients" returns to the same results.
+- **Create, edit, delete:** the form checks input before saving, and a duplicate email is flagged
+  on the Email field.
+- **Allergies and conditions:** pick from the shared lists, or type a new name and press Enter.
+  Names match regardless of capitalization, so "latex" selects "Latex".
+- **Theme:** switch between light and dark in the sidebar (in the header on small screens).
+
 ## Tests and checks
 
 Backend, Git Bash (create and install only the first time):
