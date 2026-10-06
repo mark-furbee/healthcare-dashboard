@@ -41,6 +41,7 @@ on the next `docker compose up --build`.
 - **Patients:** search by name or email, filter by status, and sort by any column. The list's
   state is kept in the URL, so Back, reloads, and shared links show the same results.
 - **Patient record:** click any row to open it; "← Back to patients" returns to the same results.
+  The record includes a generated summary and clinical notes, which you can add and delete.
 - **Create, edit, delete:** the form checks input before saving, and a duplicate email is flagged
   on the Email field.
 - **Allergies and conditions:** pick from the shared lists, or type a new name and press Enter.

@@ -1,0 +1,117 @@
+import { Button, List, ListItem, ListItemText, Stack, TextField, Typography } from '@mui/material'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useEffect, useState, type SubmitEvent } from 'react'
+import { api } from '../api'
+import { formatDateTime, toDateTimeInputValue } from '../format'
+import { notesQuery } from '../queries'
+import { ErrorAlert } from './ErrorAlert'
+import { Section } from './Section'
+
+const MAX_NOTE_LENGTH = 5000
+const CLOCK_TICK_MS = 30_000
+
+/** The current time as a datetime-local value, kept up to date while the page is open. */
+function useNow() {
+  const [now, setNow] = useState(() => toDateTimeInputValue(new Date()))
+  useEffect(() => {
+    const timer = setInterval(() => setNow(toDateTimeInputValue(new Date())), CLOCK_TICK_MS)
+    return () => clearInterval(timer)
+  }, [])
+  return now
+}
+
+export function PatientNotes({ patientId }: { patientId: number }) {
+  const queryClient = useQueryClient()
+  const [content, setContent] = useState('')
+  // null until the user picks a time; the field then shows, and the note gets, the current time.
+  const [time, setTime] = useState<string | null>(null)
+  const now = useNow()
+  const notes = useQuery(notesQuery(patientId))
+  // Notes feed the summary, so refresh everything cached under this patient.
+  const refreshPatient = () => queryClient.invalidateQueries({ queryKey: ['patient', patientId] })
+
+  const createNote = useMutation({
+    // An unchanged time is left to the server, so a form left open still records when it was sent.
+    mutationFn: () =>
+      api.createNote(patientId, content.trim(), time ? new Date(time).toISOString() : undefined),
+    onSuccess: () => {
+      setContent('')
+      setTime(null)
+      return refreshPatient()
+    },
+  })
+  const deleteNote = useMutation({
+    mutationFn: (noteId: number) => api.deleteNote(patientId, noteId),
+    onSuccess: refreshPatient,
+  })
+
+  function handleSubmit(event: SubmitEvent) {
+    event.preventDefault()
+    createNote.mutate()
+  }
+
+  return (
+    <Section title="Clinical notes">
+      <Stack component="form" onSubmit={handleSubmit} spacing={1}>
+        <TextField
+          label="New note"
+          value={content}
+          onChange={(event) => setContent(event.target.value)}
+          multiline
+          minRows={2}
+          slotProps={{ htmlInput: { maxLength: MAX_NOTE_LENGTH } }}
+        />
+        <Stack
+          direction={{ xs: 'column', sm: 'row' }}
+          spacing={1}
+          sx={{ justifyContent: 'space-between', alignItems: { sm: 'flex-start' } }}
+        >
+          <TextField
+            type="datetime-local"
+            label="Time"
+            value={time ?? now}
+            onChange={(event) => setTime(event.target.value || null)}
+            helperText={time ? 'Clear to use the current time' : 'Defaults to now'}
+            slotProps={{ inputLabel: { shrink: true }, htmlInput: { max: now } }}
+          />
+          <Button
+            type="submit"
+            variant="contained"
+            disabled={!content.trim() || createNote.isPending}
+            sx={{ alignSelf: { xs: 'flex-end', sm: 'flex-start' } }}
+          >
+            Add note
+          </Button>
+        </Stack>
+      </Stack>
+      {createNote.isError && <ErrorAlert error={createNote.error} />}
+      {deleteNote.isError && <ErrorAlert error={deleteNote.error} />}
+      {notes.isError && <ErrorAlert error={notes.error} onRetry={() => notes.refetch()} />}
+      {notes.data?.length === 0 && <Typography color="text.secondary">No notes yet.</Typography>}
+      <List>
+        {notes.data?.map((note) => (
+          <ListItem
+            key={note.id}
+            divider
+            secondaryAction={
+              <Button
+                color="error"
+                size="small"
+                onClick={() => window.confirm('Delete this note?') && deleteNote.mutate(note.id)}
+                disabled={deleteNote.isPending}
+              >
+                Delete note
+              </Button>
+            }
+          >
+            <ListItemText
+              primary={note.content}
+              secondary={formatDateTime(note.timestamp)}
+              slotProps={{ primary: { sx: { whiteSpace: 'pre-wrap' } } }}
+            />
+          </ListItem>
+        ))}
+      </List>
+    </Section>
+  )
+}

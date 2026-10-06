@@ -1,11 +1,14 @@
 from typing import Annotated, Literal
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from fastapi import APIRouter, Depends, HTTPException, Query, exceptions
 from sqlalchemy import exc, func, or_, select
 
+from ..audit import log_patient_deleted
 from ..database import DbSession
 from ..models import Allergy, Condition, Patient
-from ..schemas import PatientIn, PatientOut, PatientPage, Status
+from ..schemas import PatientIn, PatientOut, PatientPage, Status, Summary
+from ..summary import summarize
 
 router = APIRouter(prefix="/patients", tags=["patients"])
 
@@ -133,5 +136,26 @@ def update_patient(payload: PatientIn, patient: PatientById, db: DbSession):
 
 @router.delete("/{patient_id}", status_code=204)
 def delete_patient(patient: PatientById, db: DbSession):
+    # Logged in the same transaction, so a deletion is never left unrecorded.
+    log_patient_deleted(db, patient)
     db.delete(patient)
     db.commit()
+
+
+@router.get("/{patient_id}/summary", response_model=Summary)
+def get_summary(patient: PatientById, tz: Annotated[str, Query(max_length=64)] = "UTC"):
+    """tz is an IANA time zone, such as America/Los_Angeles, for the notes' dates."""
+    try:
+        zone = ZoneInfo(tz)
+    except (ZoneInfoNotFoundError, ValueError):
+        raise exceptions.RequestValidationError(
+            [
+                {
+                    "type": "time_zone",
+                    "loc": ("query", "tz"),
+                    "msg": "Unknown time zone",
+                    "input": tz,
+                }
+            ]
+        ) from None
+    return {"summary": summarize(patient, zone)}

@@ -1,6 +1,6 @@
-from datetime import date
+from datetime import date, datetime
 
-from sqlalchemy import Column, ForeignKey, Table, orm
+from sqlalchemy import Column, DateTime, ForeignKey, Table, orm
 
 from .database import Base
 
@@ -65,6 +65,16 @@ class Patient(Base):
     conditions: orm.Mapped[list[Condition]] = orm.relationship(
         secondary=patient_conditions, order_by=Condition.name
     )
+    # Every note, including soft-deleted ones, which go only with the patient.
+    notes: orm.Mapped[list["Note"]] = orm.relationship(
+        cascade="all, delete-orphan", order_by="Note.timestamp.desc()"
+    )
+    # The notes the app shows: not deleted, newest first.
+    active_notes: orm.Mapped[list["Note"]] = orm.relationship(
+        primaryjoin="and_(Patient.id == Note.patient_id, Note.deleted_at.is_(None))",
+        order_by="Note.timestamp.desc()",
+        viewonly=True,
+    )
 
     @property
     def age(self) -> int:
@@ -74,3 +84,29 @@ class Patient(Base):
             self.date_of_birth.day,
         )
         return today.year - self.date_of_birth.year - birthday_pending
+
+
+class Note(Base):
+    __tablename__ = "notes"
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    patient_id: orm.Mapped[int] = orm.mapped_column(
+        ForeignKey("patients.id", ondelete="CASCADE"), index=True
+    )
+    timestamp: orm.Mapped[datetime] = orm.mapped_column(DateTime(timezone=True))
+    content: orm.Mapped[str]
+    # Clinical records are kept: deleting a note hides it rather than removing it.
+    deleted_at: orm.Mapped[datetime | None] = orm.mapped_column(DateTime(timezone=True))
+
+
+class AuditEntry(Base):
+    """One recorded deletion. Kept after the patient is deleted, so no foreign key."""
+
+    __tablename__ = "audit_log"
+
+    id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
+    timestamp: orm.Mapped[datetime] = orm.mapped_column(DateTime(timezone=True))
+    action: orm.Mapped[str]
+    patient_id: orm.Mapped[int] = orm.mapped_column(index=True)
+    note_id: orm.Mapped[int | None]
+    description: orm.Mapped[str]

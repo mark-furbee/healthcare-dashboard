@@ -1,5 +1,5 @@
 import re
-from datetime import date
+from datetime import UTC, date, datetime, timedelta
 from typing import Annotated, Literal
 
 from pydantic import (
@@ -71,3 +71,42 @@ class PatientOut(PatientIn):
 class PatientPage(BaseModel):
     items: list[PatientOut]
     total: int
+
+
+# Allows for small differences between the browser's clock and the server's.
+CLOCK_SKEW = timedelta(minutes=5)
+
+
+def not_in_future_time(value: datetime) -> datetime:
+    # A time without a zone is taken as UTC, like the stored timestamps.
+    value = value if value.tzinfo else value.replace(tzinfo=UTC)
+    if value > datetime.now(UTC) + CLOCK_SKEW:
+        raise ValueError("Note time cannot be in the future")
+    return value
+
+
+class NoteIn(BaseModel):
+    # Omitted means now.
+    timestamp: Annotated[datetime, AfterValidator(not_in_future_time)] | None = None
+    content: Annotated[str, text(5000)]
+
+
+class NoteOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    timestamp: datetime
+    content: str
+
+
+class Summary(BaseModel):
+    summary: str
+
+
+class AuditEntryOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: int
+    timestamp: datetime
+    action: str
+    patient_id: int
+    note_id: int | None
+    description: str

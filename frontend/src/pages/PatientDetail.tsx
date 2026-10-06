@@ -3,6 +3,8 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { api } from '../api'
 import { ErrorAlert } from '../components/ErrorAlert'
+import { PatientNotes } from '../components/PatientNotes'
+import { PatientSummary } from '../components/PatientSummary'
 import { Section } from '../components/Section'
 import { StatusChip } from '../components/StatusChip'
 import { formatDate, fullName } from '../format'
@@ -48,7 +50,7 @@ function PatientRecord({ id }: { id: number }) {
   ]
 
   function confirmDelete() {
-    if (window.confirm(`Delete ${fullName(patient)}?`)) {
+    if (window.confirm(`Delete ${fullName(patient)} and all of their notes?`)) {
       deletePatient.mutate()
     }
   }
@@ -111,6 +113,8 @@ function PatientRecord({ id }: { id: number }) {
           ))}
         </Box>
       </Section>
+      <PatientSummary patientId={id} />
+      <PatientNotes patientId={id} />
     </Stack>
   )
 }
