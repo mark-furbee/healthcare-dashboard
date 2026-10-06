@@ -1,4 +1,4 @@
-import type { Note, Patient, PatientInput, PatientPage, PatientQuery } from './types'
+import type { Note, Patient, PatientInput, PatientPage, PatientQuery, Summary } from './types'
 
 export class ApiError extends Error {
   /** Messages for request-body fields the API rejected, keyed by field name. */
@@ -28,11 +28,14 @@ function errorMessage(detail: unknown): string {
 
 function fieldErrors(detail: unknown): Record<string, string> {
   if (!Array.isArray(detail)) return {}
-  // Only errors on a whole body field, such as ["body", "email"], belong to a single form field.
-  const fieldLevel = detail.filter(
-    (error: ValidationError) => error.loc.length === 2 && error.loc[0] === 'body',
-  )
-  return Object.fromEntries(fieldLevel.map((error: ValidationError) => [error.loc[1], error.msg]))
+  // A body error belongs to its top-level field: ["body", "email"] to email, and an error on
+  // one list item, ["body", "allergies", 0], to allergies. The first error per field is kept.
+  const errors: Record<string, string> = {}
+  for (const error of detail as ValidationError[]) {
+    const [location, field] = error.loc
+    if (location === 'body' && typeof field === 'string') errors[field] ??= error.msg
+  }
+  return errors
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
@@ -76,7 +79,7 @@ export const api = {
     request<void>(`/patients/${patientId}/notes/${noteId}`, { method: 'DELETE' }),
   // The summary dates notes in the viewer's time zone, like the notes list.
   getSummary: (patientId: number) =>
-    request<{ summary: string }>(
+    request<Summary>(
       `/patients/${patientId}/summary?${new URLSearchParams({
         tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
       })}`,

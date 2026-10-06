@@ -53,14 +53,19 @@ describe('api', () => {
     )
   })
 
-  it('keeps whole-field validation errors by field name', async () => {
+  it('keeps validation errors by top-level field name', async () => {
     const detail = [
       { loc: ['body', 'email'], msg: 'A patient with this email already exists' },
       { loc: ['body', 'conditions', 0], msg: 'String should have at least 1 character' },
+      { loc: ['body', 'conditions', 1], msg: 'String should have at most 100 characters' },
+      { loc: ['query', 'page'], msg: 'Input should be greater than 0' },
     ]
     stubFetch(jsonResponse({ detail }, 422))
     const error = await api.createPatient({} as PatientInput).catch((error) => error)
-    expect(error.fieldErrors).toEqual({ email: 'A patient with this email already exists' })
+    expect(error.fieldErrors).toEqual({
+      email: 'A patient with this email already exists',
+      conditions: 'String should have at least 1 character',
+    })
   })
 
   it('falls back to a generic message when the error body is not JSON', async () => {

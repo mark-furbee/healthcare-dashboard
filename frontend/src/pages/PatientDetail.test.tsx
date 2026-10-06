@@ -1,9 +1,9 @@
-import { fireEvent, screen, waitFor } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { api, ApiError } from '../api'
 import { toDateTimeInputValue } from '../format'
-import { makePatient } from '../test/fixtures'
+import { makePatient, makeSummary } from '../test/fixtures'
 import { renderApp } from '../test/render'
 
 const note = { id: 5, timestamp: '2026-09-01T15:30:00Z', content: 'Follow-up: symptoms improving.' }
@@ -11,7 +11,14 @@ const note = { id: 5, timestamp: '2026-09-01T15:30:00Z', content: 'Follow-up: sy
 beforeEach(() => {
   vi.spyOn(api, 'getPatient').mockResolvedValue(makePatient())
   vi.spyOn(api, 'listNotes').mockResolvedValue([note])
-  vi.spyOn(api, 'getSummary').mockResolvedValue({ summary: 'Maria Rodriguez is a 46-year-old...' })
+  vi.spyOn(api, 'getSummary').mockResolvedValue(
+    makeSummary({
+      overview: 'Maria Rodriguez is a 46-year-old active patient with blood type A+.',
+      conditions: ['Asthma'],
+      allergies: ['Penicillin'],
+      history: [{ date: '9/1/2026', excerpt: 'Follow-up: symptoms improving.' }],
+    }),
+  )
 })
 
 describe('PatientDetail', () => {
@@ -19,9 +26,20 @@ describe('PatientDetail', () => {
     renderApp('/patients/1')
     expect(await screen.findByRole('heading', { name: 'Maria Rodriguez' })).toBeInTheDocument()
     expect(screen.getByText('4/12/1980 (age 46)')).toBeInTheDocument()
-    expect(screen.getByText('Penicillin')).toBeInTheDocument()
-    expect(await screen.findByText('Maria Rodriguez is a 46-year-old...')).toBeInTheDocument()
-    expect(await screen.findByText(note.content)).toBeInTheDocument()
+    expect(
+      await screen.findByText(
+        'Maria Rodriguez is a 46-year-old active patient with blood type A+.',
+      ),
+    ).toBeInTheDocument()
+    // The summary labels its grouped values.
+    const summary = screen.getByRole('heading', { name: 'Summary' }).parentElement!
+    const valueOf = (label: string) =>
+      within(summary).getByText(label).nextElementSibling as HTMLElement
+    expect(within(valueOf('Conditions')).getByText('Asthma')).toBeInTheDocument()
+    expect(within(valueOf('Allergies')).getByText('Penicillin')).toBeInTheDocument()
+    expect(within(valueOf('History')).getByText('9/1/2026')).toBeInTheDocument()
+    // The note appears in the summary's history and in the notes list.
+    expect(await screen.findAllByText(note.content)).toHaveLength(2)
     // Shown in the viewer's time zone, so check the format rather than the hour.
     expect(screen.getByText(/^9\/1\/2026, \d{1,2}:\d{2} [AP]M$/)).toBeInTheDocument()
   })
@@ -62,6 +80,24 @@ describe('PatientDetail', () => {
       'Phone follow-up.',
       new Date('2026-09-01T08:30').toISOString(),
     )
+  })
+
+  it('counts characters near the note limit and blocks notes over it', async () => {
+    renderApp('/patients/1')
+    const field = await screen.findByLabelText('New note')
+    const addButton = screen.getByRole('button', { name: 'Add note' })
+
+    fireEvent.change(field, { target: { value: 'x'.repeat(4500) } })
+    expect(screen.getByText('4,500 / 5,000')).toBeInTheDocument()
+    expect(addButton).toBeEnabled()
+
+    // Pasted text isn't cut off; the note just can't be added until it fits.
+    fireEvent.change(field, { target: { value: 'x'.repeat(5001) } })
+    expect(field).toHaveValue('x'.repeat(5001))
+    expect(
+      screen.getByText('Notes must be 5,000 characters or fewer (currently 5,001)'),
+    ).toBeInTheDocument()
+    expect(addButton).toBeDisabled()
   })
 
   it('deletes a note only after confirmation', async () => {

@@ -1,4 +1,4 @@
-import type { Patient } from '../types'
+import type { Patient, Summary } from '../types'
 
 export function makePatient(overrides: Partial<Patient> = {}): Patient {
   return {
@@ -15,6 +15,17 @@ export function makePatient(overrides: Partial<Patient> = {}): Patient {
     allergies: ['Penicillin'],
     conditions: ['Asthma'],
     last_visit: '2026-09-01',
+    ...overrides,
+  }
+}
+
+export function makeSummary(overrides: Partial<Summary> = {}): Summary {
+  return {
+    summary: '',
+    overview: '',
+    conditions: [],
+    allergies: [],
+    history: [],
     ...overrides,
   }
 }

@@ -158,4 +158,4 @@ def get_summary(patient: PatientById, tz: Annotated[str, Query(max_length=64)] =
                 }
             ]
         ) from None
-    return {"summary": summarize(patient, zone)}
+    return summarize(patient, zone)
