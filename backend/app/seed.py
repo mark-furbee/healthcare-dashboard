@@ -2,13 +2,13 @@ import random
 from datetime import date, timedelta
 from itertools import product
 
-from sqlalchemy import select, orm
+from sqlalchemy import orm, select
 
 from .database import SessionLocal
 from .models import Allergy, Condition, Patient
 
-# Phone numbers use (XXX) 555-0100 to (XXX) 555-0199, the range reserved for fictional use, so 100
-# is the cap.
+# Phone numbers use (XXX) 555-0100 to (XXX) 555-0199, the range reserved for fictional
+# use, so 100 is the cap.
 PATIENT_COUNT = 100
 # A fixed seed gives every developer the same patients, so bugs reproduce consistently.
 RANDOM_SEED = 2026
