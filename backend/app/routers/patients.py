@@ -18,6 +18,15 @@ SORT_COLUMNS = {
     "last_visit": Patient.last_visit,
     "status": Patient.status,
 }
+# The accepted sort values are SORT_COLUMNS' keys, so the two can't drift apart.
+SortField = Literal[tuple(SORT_COLUMNS)]
+
+
+def field_error(location: str, field: str, kind: str, message: str, value: object):
+    """A 422 shaped like FastAPI's validation errors, so forms show it on the field."""
+    return exceptions.RequestValidationError(
+        [{"type": kind, "loc": (location, field), "msg": message, "input": value}]
+    )
 
 
 def get_patient_or_404(patient_id: int, db: DbSession) -> Patient:
@@ -33,23 +42,19 @@ PatientById = Annotated[Patient, Depends(get_patient_or_404)]
 def commit_or_reject_duplicate_email(db: DbSession, email: str) -> None:
     # The database's unique constraint is the source of truth for duplicate emails,
     # which avoids the race between a separate "does this email exist?" query and the
-    # insert. The error has the same shape as any other validation error, so a form can
-    # show it on the email field.
+    # insert.
     try:
         db.commit()
     except exc.IntegrityError as error:
         db.rollback()
         if "email" not in str(error.orig):
             raise
-        raise exceptions.RequestValidationError(
-            [
-                {
-                    "type": "duplicate_email",
-                    "loc": ("body", "email"),
-                    "msg": "A patient with this email already exists",
-                    "input": email,
-                }
-            ]
+        raise field_error(
+            "body",
+            "email",
+            "duplicate_email",
+            "A patient with this email already exists",
+            email,
         ) from None
 
 
@@ -73,7 +78,7 @@ def list_patients(
     page_size: Annotated[int, Query(ge=1, le=100)] = 10,
     search: Annotated[str, Query(max_length=100)] = "",
     status: Status | None = None,
-    sort: Literal["name", "age", "last_visit", "status"] = "name",
+    sort: SortField = "name",
     order: Literal["asc", "desc"] = "asc",
 ):
     query = select(Patient)
@@ -148,14 +153,5 @@ def get_summary(patient: PatientById, tz: Annotated[str, Query(max_length=64)] =
     try:
         zone = ZoneInfo(tz)
     except (ZoneInfoNotFoundError, ValueError):
-        raise exceptions.RequestValidationError(
-            [
-                {
-                    "type": "time_zone",
-                    "loc": ("query", "tz"),
-                    "msg": "Unknown time zone",
-                    "input": tz,
-                }
-            ]
-        ) from None
+        raise field_error("query", "tz", "time_zone", "Unknown time zone", tz) from None
     return summarize(patient, zone)

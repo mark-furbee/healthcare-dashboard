@@ -7,6 +7,7 @@ import { PatientList } from '../components/PatientList'
 import { capitalize } from '../format'
 import { patientsQuery } from '../queries'
 import { SORT_FIELDS, STATUSES, type SortField } from '../types'
+import { listReturnState } from '../useListReturn'
 
 const PAGE_SIZE = 10
 const SEARCH_DELAY_MS = 300
@@ -79,7 +80,7 @@ export function Patients() {
         <Button
           component={RouterLink}
           to="/patients/new"
-          state={{ listSearch: location.search }}
+          state={listReturnState(location.search)}
           variant="contained"
         >
           New patient

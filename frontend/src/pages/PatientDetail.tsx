@@ -1,14 +1,15 @@
-import { Box, Button, CircularProgress, Link, Stack, Typography } from '@mui/material'
+import { Button, CircularProgress, Link, Stack, Typography } from '@mui/material'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link as RouterLink, useNavigate } from 'react-router-dom'
 import { api } from '../api'
+import { Detail, DetailList } from '../components/DetailList'
 import { ErrorAlert } from '../components/ErrorAlert'
 import { PatientNotes } from '../components/PatientNotes'
 import { PatientSummary } from '../components/PatientSummary'
 import { Section } from '../components/Section'
 import { StatusChip } from '../components/StatusChip'
-import { formatDate, fullName } from '../format'
-import { patientQuery } from '../queries'
+import { formatDate, formatDateOrNone, fullName } from '../format'
+import { patientQuery, queryKeys } from '../queries'
 import { useListReturn } from '../useListReturn'
 import { usePatientId } from '../usePatientId'
 import { NotFound } from './NotFound'
@@ -26,8 +27,8 @@ function PatientRecord({ id }: { id: number }) {
   const deletePatient = useMutation({
     mutationFn: () => api.deletePatient(id),
     onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ['patient', id] })
-      queryClient.invalidateQueries({ queryKey: ['patients'] })
+      queryClient.removeQueries({ queryKey: queryKeys.patient(id) })
+      queryClient.invalidateQueries({ queryKey: queryKeys.patients })
       navigate(listUrl)
     },
   })
@@ -41,12 +42,11 @@ function PatientRecord({ id }: { id: number }) {
   const details = [
     ['Date of birth', `${formatDate(patient.date_of_birth)} (age ${patient.age})`],
     ['Blood type', patient.blood_type],
-    ['Last visit', patient.last_visit ? formatDate(patient.last_visit) : 'None'],
+    ['Last visit', formatDateOrNone(patient.last_visit)],
     ['Email', patient.email],
     ['Phone', patient.phone],
     ['Address', patient.address],
-    ['Conditions', patient.conditions.join(', ') || 'None recorded'],
-    ['Allergies', patient.allergies.join(', ') || 'None recorded'],
+    // Conditions and allergies appear in the Summary below, so the profile doesn't repeat them.
   ]
 
   function confirmDelete() {
@@ -92,26 +92,18 @@ function PatientRecord({ id }: { id: number }) {
       </Stack>
       {deletePatient.isError && <ErrorAlert error={deletePatient.error} />}
       <Section title="Profile">
-        <Box
-          component="dl"
+        <DetailList
           sx={{
-            display: 'grid',
-            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
             gap: 2,
-            m: 0,
           }}
         >
           {details.map(([label, value]) => (
-            <div key={label}>
-              <Typography component="dt" variant="body2" color="text.secondary">
-                {label}
-              </Typography>
-              <Typography component="dd" sx={{ m: 0, overflowWrap: 'anywhere' }}>
-                {value}
-              </Typography>
-            </div>
+            <Detail key={label} label={label}>
+              {value}
+            </Detail>
           ))}
-        </Box>
+        </DetailList>
       </Section>
       <PatientSummary patientId={id} />
       <PatientNotes patientId={id} />

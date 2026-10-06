@@ -12,7 +12,7 @@ import { Link as RouterLink } from 'react-router-dom'
 import { ErrorAlert } from '../components/ErrorAlert'
 import { Section } from '../components/Section'
 import { StatusChip } from '../components/StatusChip'
-import { formatDate, fullName } from '../format'
+import { formatDateOrNone, fullName } from '../format'
 import { patientsQuery } from '../queries'
 
 function Stat({ label, value }: { label: string; value?: number }) {
@@ -54,7 +54,7 @@ export function Dashboard() {
             <ListItemButton key={patient.id} component={RouterLink} to={`/patients/${patient.id}`}>
               <ListItemText
                 primary={fullName(patient)}
-                secondary={`Last visit: ${patient.last_visit ? formatDate(patient.last_visit) : 'None'}`}
+                secondary={`Last visit: ${formatDateOrNone(patient.last_visit)}`}
               />
               <StatusChip status={patient.status} />
             </ListItemButton>
