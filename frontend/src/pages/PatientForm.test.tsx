@@ -10,6 +10,8 @@ const maria = makePatient()
 beforeEach(() => {
   // After saving, the form navigates to the patient's detail page.
   vi.spyOn(api, 'getPatient').mockResolvedValue(maria)
+  vi.spyOn(api, 'listNotes').mockResolvedValue([])
+  vi.spyOn(api, 'getSummary').mockResolvedValue({ summary: '' })
   vi.spyOn(api, 'listAllergies').mockResolvedValue(['Latex', 'Penicillin', 'Pollen'])
   vi.spyOn(api, 'listConditions').mockResolvedValue(['Asthma', 'Migraine'])
 })

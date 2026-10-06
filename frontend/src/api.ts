@@ -1,4 +1,4 @@
-import type { Patient, PatientInput, PatientPage, PatientQuery } from './types'
+import type { Note, Patient, PatientInput, PatientPage, PatientQuery } from './types'
 
 export class ApiError extends Error {
   /** Messages for request-body fields the API rejected, keyed by field name. */
@@ -65,6 +65,22 @@ export const api = {
   updatePatient: (id: number, input: PatientInput) =>
     request<Patient>(`/patients/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
   deletePatient: (id: number) => request<void>(`/patients/${id}`, { method: 'DELETE' }),
+  listNotes: (patientId: number) => request<Note[]>(`/patients/${patientId}/notes`),
+  /** Without a timestamp, the note is stamped with the current time. */
+  createNote: (patientId: number, content: string, timestamp?: string) =>
+    request<Note>(`/patients/${patientId}/notes`, {
+      method: 'POST',
+      body: JSON.stringify({ content, timestamp }),
+    }),
+  deleteNote: (patientId: number, noteId: number) =>
+    request<void>(`/patients/${patientId}/notes/${noteId}`, { method: 'DELETE' }),
+  // The summary dates notes in the viewer's time zone, like the notes list.
+  getSummary: (patientId: number) =>
+    request<{ summary: string }>(
+      `/patients/${patientId}/summary?${new URLSearchParams({
+        tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      })}`,
+    ),
   listAllergies: () => request<string[]>('/allergies'),
   listConditions: () => request<string[]>('/conditions'),
 }

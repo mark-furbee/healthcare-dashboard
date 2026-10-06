@@ -38,3 +38,9 @@ export interface PatientQuery {
   sort?: SortField
   order?: 'asc' | 'desc'
 }
+
+export interface Note {
+  id: number
+  timestamp: string
+  content: string
+}

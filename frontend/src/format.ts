@@ -10,3 +10,22 @@ export function formatDate(isoDate: string) {
   const [year, month, day] = isoDate.split('-').map(Number)
   return `${month}/${day}/${year}`
 }
+
+/** Formats an ISO timestamp in the viewer's time zone as m/d/YYYY, h:mm AM/PM. */
+export const formatDateTime = (isoTimestamp: string) =>
+  new Date(isoTimestamp).toLocaleString('en-US', {
+    month: 'numeric',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  })
+
+/** A Date as a datetime-local input's value (YYYY-MM-DDTHH:mm) in the viewer's time zone. */
+export function toDateTimeInputValue(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, '0')
+  return (
+    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
+    `T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  )
+}

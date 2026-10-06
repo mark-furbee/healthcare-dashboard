@@ -22,6 +22,16 @@ describe('api', () => {
     expect(fetch).toHaveBeenCalledWith('/api/patients?page=2&status=active', expect.anything())
   })
 
+  it("asks for the summary in the viewer's time zone", async () => {
+    const fetch = stubFetch(jsonResponse({ summary: '' }))
+    await api.getSummary(1)
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    expect(fetch).toHaveBeenCalledWith(
+      `/api/patients/1/summary?${new URLSearchParams({ tz: timeZone })}`,
+      expect.anything(),
+    )
+  })
+
   it('explains network failures', async () => {
     stubFetch(new TypeError('Failed to fetch'))
     await expect(api.listPatients({})).rejects.toThrow(/unable to reach the server/i)
